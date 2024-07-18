@@ -247,6 +247,6 @@ if __name__ == "__main__":
 
         # 1000 에피소드마다 모델 저장
         if episode % 1000 == 0:
-            agent.model.save_weights("./save_model/model", save_format="tf")
+            torch.save(agent.model.state_dict(), "model.pth")
 
 
