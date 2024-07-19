@@ -62,19 +62,19 @@ class DQNAgent:
 
         # 모델과 타깃 모델 생성
         self.model = DQN(state_size, action_size)
-        self.target_model = DQN(state_size, action_size)
+        # self.target_model = DQN(state_size, action_size)
         self.optimizer = Adam(self.learning_rate, clipnorm=10.)
         # 타깃 모델 초기화
-        self.update_target_model()
+        #self.update_target_model()
 
         self.avg_q_max, self.avg_loss = 0, 0
 
-        self.writer = tf.summary.create_file_writer('summary/breakout_dqn')
+        # self.writer = tf.summary.create_file_writer('summary/breakout_dqn')
         self.model_path = os.path.join(os.getcwd(), 'save_model', 'model')
 
-    # 타깃 모델을 모델의 가중치로 업데이트
-    def update_target_model(self):
-        self.target_model.set_weights(self.model.get_weights())
+# # 타깃 모델을 모델의 가중치로 업데이트
+# def update_target_model(self):
+#     self.target_model.set_weights(self.model.get_weights())
 
     # 입실론 탐욕 정책으로 행동 선택
     def get_action(self, history):
@@ -89,15 +89,15 @@ class DQNAgent:
     def append_sample(self, history, action, reward, next_history, dead):
         self.memory.append((history, action, reward, next_history, dead))
 
-    # 텐서보드에 학습 정보를 기록
-    def draw_tensorboard(self, score, step, episode):
-        with self.writer.as_default():
-            tf.summary.scalar('Total Reward/Episode', score, step=episode)
-            tf.summary.scalar('Average Max Q/Episode',
-                              self.avg_q_max / float(step), step=episode)
-            tf.summary.scalar('Duration/Episode', step, step=episode)
-            tf.summary.scalar('Average Loss/Episode',
-                              self.avg_loss / float(step), step=episode)
+    # # 텐서보드에 학습 정보를 기록
+    # def draw_tensorboard(self, score, step, episode):
+    #     with self.writer.as_default():
+    #         tf.summary.scalar('Total Reward/Episode', score, step=episode)
+    #         tf.summary.scalar('Average Max Q/Episode',
+    #                           self.avg_q_max / float(step), step=episode)
+    #         tf.summary.scalar('Duration/Episode', step, step=episode)
+    #         tf.summary.scalar('Average Loss/Episode',
+    #                           self.avg_loss / float(step), step=episode)
 
     # 리플레이 메모리에서 무작위로 추출한 배치로 모델 학습
     def train_model(self):
@@ -119,15 +119,13 @@ class DQNAgent:
         model_params = self.model.trainable_variables
         with tf.GradientTape() as tape:
             # 현재 상태에 대한 모델의 큐함수
-            predicts = self.model(history)
-            one_hot_action = tf.one_hot(actions, self.action_size)
-            predicts = tf.reduce_sum(one_hot_action * predicts, axis=1)
+            predicts = self.model(history).gather(1, actions)
 
-            # 다음 상태에 대한 타깃 모델의 큐함수
-            target_predicts = self.target_model(next_history)
+            # 다음 상태에 대한 모델의 큐함수
+            target_predicts = self.model(next_history)
 
             # 벨만 최적 방정식을 구성하기 위한 타깃과 큐함수의 최대 값 계산
-            max_q = np.amax(target_predicts, axis=1)
+            max_q = np.amax(target_predicts, axis=1)    # 같은 표현 max_next_q = self.model(next_history).detach().max(1)[0]
             targets = rewards + (1 - dones) * self.discount_factor * max_q
 
             # 후버로스 계산
